@@ -21,22 +21,21 @@ def hello_world():
   name = os.environ.get("NAME", "World")
   return f"Hello {name}!"
 
-@app.route('/reply', methods=['POST'])
-#@app.route('/reply')
-def reply():
-  #data = request.get_json()
-  query = "Who was the founder of Microsoft?"
-  #query = data.get('query')
-  #name = data.get('name')
-  #unique_id = data.get('unique_id')
+#@app.route('/create_vector_store', methods=['POST'])
+@app.route('/create_vector_store')
+def create_vector_store():
   faq, context, answer = get_docs()
-  db = create_vector_store(faq)
-  relevant_docs = get_relevant_doc(db, query)
-  response = get_response(relevant_docs, query)
-  return jsonify({"reply": response})
+  with open("faq.txt", "w") as file:
+    file.write(faq)
+  with open("context.txt", "w") as file:
+    file.write(context)
+  with open("answer.txt", "w") as file:
+    file.write(answer)
+  create_vector_store(faq)
+  return jsonify({"message": "Vector store created successfully"})
 
 def get_docs():
-    url = "https://script.google.com/macros/s/AKfycbyGC3gvjFJM-GHO6RysDr4sjtiGpQkOj--aFLyq6hS8Qckvf6SYecU4jicLW0xZlCewWg/exec"
+    url = "https://script.google.com/macros/s/AKfycbzfXyszyHs4YHIxGXocaXqjzpNjZsOOIzxdGVfQ0ZHv_9M-hFAJvVGF8pIkBcVnUldVlQ/exec"
 
     payload = {}
     headers = {
@@ -68,23 +67,25 @@ def create_vector_store(faq):
     # Split the document into chunks
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     docs = text_splitter.split_text(documents)
-    # Display information about the split documents
-    #print("\n--- Document Chunks Information ---")
-    #print(f"Number of document chunks: {len(docs)}")
-    #print(f"Sample chunk:\n{docs[0].page_content}\n")
-
-    # Create embeddings
     #print("\n--- Creating embeddings ---")
     embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-    #print("\n--- Finished creating embeddings ---")
-
-    # Create the vector store and persist it automatically
-    #print("\n--- Creating vector store ---")
-    db = Chroma.from_texts(docs, embedding_function)
+    db = Chroma.from_texts(docs, embedding_function, persist_directory="./chroma_db")
     #print("\n--- Finished creating vector store ---")
-    return db
+    return
 
-def get_relevant_doc(db, query):
+#@app.route('/reply', methods=['POST'])
+@app.route('/reply')
+def reply():
+  #data = request.get_json()
+  query = "What is the eligibility criteria?"
+  #query = data.get('query')
+  #name = data.get('name')
+  #unique_id = data.get('unique_id')
+  relevant_docs = get_relevant_doc(query)
+  response = get_response(relevant_docs, query)
+  return jsonify({"reply": response})
+
+def get_relevant_doc(query):
     embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
     # Load the existing vector store with the embedding function
@@ -92,10 +93,11 @@ def get_relevant_doc(db, query):
     #            embedding_function=embedding_function)
 
     #query = "Who founded Microsoft?"
+    db = Chroma(persist_directory="./chroma_db", embedding_function=embedding_function)
 
     retriever = db.as_retriever(
         search_type="similarity_score_threshold",
-        search_kwargs={"k": 3, "score_threshold": 0.5},
+        search_kwargs={"k": 3, "score_threshold": 0.1},
     )
     relevant_docs = retriever.invoke(query)
     return relevant_docs
@@ -106,8 +108,8 @@ def get_response(relevant_docs, query):
         + query
         + "\n\nRelevant Documents:\n"
         + "\n\n".join([doc.page_content for doc in relevant_docs])
-        + "\n\nPlease provide an answer based only on the provided documents."
-        + "\n\nYour response should not be rude. Don't let the user know which document you are referring to."
+        + "\n\nPlease provide an answer based only on the provided documents. The answer should be crisp and concise but should contain all of the information."
+        + "\n\nYour response should not be rude. Don't let the user know which document you are referring to. While answering, don't make things on your own, stick to the facts in the document."
         + "\n\nIf you don't know the answer then refrain from answering anything!"
     )
 
