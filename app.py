@@ -16,11 +16,12 @@ def hello_world():
   return f"Hello {name}!"
 
 
-#@app.route('/reply', methods=['POST'])
-@app.route('/reply')
+@app.route('/reply', methods=['POST'])
+#@app.route('/reply')
 def reply():
-  #data = request.get_json()
-  query = "Tell me about Fintech Olympiad"
+  data = request.get_json()
+  query = data.get('query')
+  #query = "Tell me about Fintech Olympiad"
   sentiment = analyze_sentiment(query)
   if(sentiment == "True"):
     print("Angry")
