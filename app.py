@@ -77,7 +77,7 @@ def get_response(faq, query):
     )
 
     messages = [
-        SystemMessage(content="You are a helpful AI Agent. You don't anything if you don't know the answer. You don't give any clarification. You answer with None. If you are answering with None, you just give a one word answer 'None'."),
+        SystemMessage(content="You are a helpful AI Agent. You dont rewrite the question in your answer. You don't do anything if you don't know the answer. You don't give any clarification. You answer with None. If you are answering with None, you just give a one word answer 'None'."),
         HumanMessage(content=combined_input),
     ]
 
